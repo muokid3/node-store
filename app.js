@@ -33,12 +33,15 @@ app.use(
     secret: "Just a random text",
     resave: false,
     saveUninitialized: false,
-    store: store
+    store: store,
   })
 );
 
 app.use((req, res, next) => {
-  User.findById("64aea633575e67877fb7b153")
+  if (!req.session.loggedInUser) {
+    return next();
+  }
+  User.findById(req.session.loggedInUser._id)
     .then((user) => {
       req.user = user;
       next();
