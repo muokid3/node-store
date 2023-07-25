@@ -58,16 +58,16 @@ app.use(errorController.get404);
 mongoose
   .connect(MONGO_DB_URI)
   .then((result) => {
-    User.findOne().then((user) => {
-      if (!user) {
-        const newUser = new User({
-          name: "Dennis",
-          email: "dennis@test.com",
-          cart: { items: [] },
-        });
-        newUser.save();
-      }
-    });
+    // User.findOne().then((user) => {
+    //   if (!user) {
+    //     const newUser = new User({
+    //       name: "Dennis",
+    //       email: "dennis@test.com",
+    //       cart: { items: [] },
+    //     });
+    //     newUser.save();
+    //   }
+    // });
     app.listen(3000);
   })
   .catch((err) => console.log(err));
