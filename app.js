@@ -6,6 +6,8 @@ const MongoDBStore = require("connect-mongodb-session")(session);
 const csrf = require("csurf");
 const flash = require("connect-flash");
 
+require("dotenv").config({ path: __dirname + "/.env" });
+
 const path = require("path");
 const errorController = require("./controllers/error");
 

@@ -1,5 +1,19 @@
 const brcrypt = require("bcryptjs");
+const nodemailer = require("nodemailer");
+//const awsSdk = require("aws-sdk");
+let aws = require("@aws-sdk/client-ses");
+let { defaultProvider } = require("@aws-sdk/credential-provider-node");
+
 const User = require("../models/user");
+
+const ses = new aws.SES({
+  region: process.env.AWS_DEFAULT_REGION,
+  defaultProvider,
+});
+
+let transporter = nodemailer.createTransport({
+  SES: { ses, aws },
+});
 
 exports.getLogin = (req, res, next) => {
   let message = req.flash("error");
@@ -16,18 +30,19 @@ exports.getLogin = (req, res, next) => {
 };
 
 exports.getSignup = (req, res, next) => {
-   let message = req.flash("error");
-   if (message.length > 0) {
-     message = message[0];
-   } else {
-     message = null;
-   }
-  
+  let message = req.flash("error");
+  if (message.length > 0) {
+    message = message[0];
+  } else {
+    message = null;
+  }
+
+  console.log(process.env.AWS_SECRET_ACCESS_KEY);
+
   res.render("auth/signup", {
     path: "/signup",
     pageTitle: "Signup",
     errorMessage: message,
-
   });
 };
 
@@ -72,10 +87,7 @@ exports.postSignup = (req, res, next) => {
   User.findOne({ email: email })
     .then((resp) => {
       if (resp) {
-              req.flash(
-                "error",
-                "Email already in use, please use a different one"
-              );
+        req.flash("error", "Email already in use, please use a different one");
 
         return res.redirect("/signup");
       }
@@ -88,10 +100,29 @@ exports.postSignup = (req, res, next) => {
         });
 
         return user.save();
+      }).then(result => {
+              transporter
+                .sendMail({
+                  from: "shop@254fundi.com",
+                  to: email,
+                  subject: "Sign up Succcessful!",
+                  text: "You just signed up on the node store!",
+                  ses: {
+                    // optional extra arguments for SendRawEmail
+                    Tags: [
+                      {
+                        Name: "tag_name",
+                        Value: "tag_value",
+                      },
+                    ],
+                  },
+                })
+                .then((result) => {
+                  console.log(result);
+                  return res.redirect("/login");
+                })
+                .catch((err) => console.log(err));
       });
-    })
-    .then((result) => {
-      res.redirect("/login");
     })
     .catch((err) => console.log(err));
 };
