@@ -1,13 +1,13 @@
 const brcrypt = require("bcryptjs");
 const nodemailer = require("nodemailer");
 const crypto = require("crypto");
+const { validationResult } = require("express-validator");
 
 //const awsSdk = require("aws-sdk");
 let aws = require("@aws-sdk/client-ses");
 let { defaultProvider } = require("@aws-sdk/credential-provider-node");
 
 const User = require("../models/user");
-const { use } = require("../routes/admin");
 
 const ses = new aws.SES({
   region: process.env.AWS_DEFAULT_REGION,
@@ -29,6 +29,11 @@ exports.getLogin = (req, res, next) => {
     path: "/login",
     pageTitle: "Login",
     errorMessage: message,
+    oldInput: {
+      email: "",
+      password: "",
+    },
+    validationErrors: [],
   });
 };
 
@@ -40,12 +45,19 @@ exports.getSignup = (req, res, next) => {
     message = null;
   }
 
-  console.log(process.env.AWS_SECRET_ACCESS_KEY);
+  // console.log(process.env.AWS_SECRET_ACCESS_KEY);
 
   res.render("auth/signup", {
     path: "/signup",
     pageTitle: "Signup",
     errorMessage: message,
+    oldInput: {
+      name: "",
+      email: "",
+      password: "",
+      confirmPassword: "",
+    },
+    validationErrors: [],
   });
 };
 
@@ -53,11 +65,36 @@ exports.postLogin = (req, res, next) => {
   const email = req.body.email;
   const pass = req.body.password;
 
+  const errors = validationResult(req);
+
+  if (!errors.isEmpty()) {
+    console.log(errors.array());
+
+    return res.status(422).render("auth/login", {
+      path: "/login",
+      pageTitle: "Log In",
+      errorMessage: errors.array()[0].msg,
+      oldInput: {
+        email: email,
+        password: pass,
+      },
+      validationErrors: errors.array(),
+    });
+  }
+
   User.findOne({ email: email })
     .then((user) => {
       if (!user) {
-        req.flash("error", "Invalid email or password");
-        return res.redirect("/login");
+        return res.status(422).render("auth/login", {
+          path: "/login",
+          pageTitle: "Log In",
+          errorMessage: "Invalid email or password",
+          oldInput: {
+            email: email,
+            password: pass,
+          },
+          validationErrors: [],
+        });
       }
 
       brcrypt
@@ -72,9 +109,16 @@ exports.postLogin = (req, res, next) => {
             });
           }
 
-          req.flash("error", "Invalid email or password");
-
-          res.redirect("/login");
+          return res.status(422).render("auth/login", {
+            path: "/login",
+            pageTitle: "Log In",
+            errorMessage: "Invalid email or password",
+            oldInput: {
+              email: email,
+              password: pass,
+            },
+            validationErrors: [],
+          });
         })
         .catch((err) => console.log(err));
     })
@@ -85,52 +129,58 @@ exports.postSignup = (req, res, next) => {
   const name = req.body.name;
   const email = req.body.email;
   const pass = req.body.password;
-  const confirmPassword = req.body.confirmPassword;
 
-  User.findOne({ email: email })
-    .then((resp) => {
-      if (resp) {
-        req.flash("error", "Email already in use, please use a different one");
+  const errors = validationResult(req);
 
-        return res.redirect("/signup");
-      }
-      return brcrypt
-        .hash(pass, 12)
-        .then((hashedPass) => {
-          const user = new User({
-            name: name,
-            email: email,
-            password: hashedPass,
-            cart: { items: [] },
-          });
+  if (!errors.isEmpty()) {
+    // console.log(errors.array());
 
-          return user.save();
-        })
-        .then((result) => {
-          transporter
-            .sendMail({
-              from: "shop@254fundi.com",
-              to: email,
-              subject: "Sign up Succcessful!",
-              text: "You just signed up on the node store!",
-              ses: {
-                // optional extra arguments for SendRawEmail
-                Tags: [
-                  {
-                    Name: "tag_name",
-                    Value: "tag_value",
-                  },
-                ],
-              },
-            })
-            .then((result) => {
-              console.log(result);
-              return res.redirect("/login");
-            })
-            .catch((err) => console.log(err));
-        });
+    return res.status(422).render("auth/signup", {
+      path: "/signup",
+      pageTitle: "Signup",
+      errorMessage: errors.array()[0].msg,
+      oldInput: {
+        name: name,
+        email: email,
+        password: pass,
+        confirmPassword: req.body.confirmPassword,
+      },
+      validationErrors: errors.array(),
+    });
+  }
+
+  brcrypt
+    .hash(pass, 12)
+    .then((hashedPass) => {
+      const user = new User({
+        name: name,
+        email: email,
+        password: hashedPass,
+        cart: { items: [] },
+      });
+
+      return user.save();
     })
-    .catch((err) => console.log(err));
+    .then((result) => {
+      res.redirect("/login");
+      transporter
+        .sendMail({
+          from: "shop@254fundi.com",
+          to: email,
+          subject: "Sign up Succcessful!",
+          text: "You just signed up on the node store!",
+          ses: {
+            // optional extra arguments for SendRawEmail
+            Tags: [
+              {
+                Name: "tag_name",
+                Value: "tag_value",
+              },
+            ],
+          },
+        })
+        .catch((err) => console.log(err));
+    });
 };
 
 exports.postLogout = (req, res, next) => {
