@@ -19,7 +19,6 @@ router.post(
   "/add-product",
   [
     body("title").isString().trim().isLength({ min: 3 }),
-    body("imageUrl").isURL(),
     body("price").isFloat(),
     body("description").isLength({ min: 8, max: 400 }).trim(),
   ],
@@ -33,7 +32,6 @@ router.post(
   "/edit-product",
   [
     body("title").isString().trim().isLength({ min: 3 }),
-    body("imageUrl").isURL(),
     body("price").isFloat(),
     body("description").isLength({ min: 8, max: 400 }).trim(),
   ],
