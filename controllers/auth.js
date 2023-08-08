@@ -120,9 +120,17 @@ exports.postLogin = (req, res, next) => {
             validationErrors: [],
           });
         })
-        .catch((err) => console.log(err));
+        .catch((err) => {
+          const error = new Error(err);
+          error.httpStatusCode = 500;
+          next(error);
+        });
     })
-    .catch((err) => console.log(err));
+    .catch((err) => {
+      const error = new Error(err);
+      error.httpStatusCode = 500;
+      next(error);
+    });
 };
 
 exports.postSignup = (req, res, next) => {
@@ -179,7 +187,11 @@ exports.postSignup = (req, res, next) => {
             ],
           },
         })
-        .catch((err) => console.log(err));
+        .catch((err) => {
+          const error = new Error(err);
+          error.httpStatusCode = 500;
+          next(error);
+        });
     });
 };
 
@@ -253,7 +265,9 @@ exports.postReset = (req, res, next) => {
           });
       })
       .catch((err) => {
-        console.log(err);
+        const error = new Error(err);
+        error.httpStatusCode = 500;
+        next(error);
       });
   });
 };
@@ -277,7 +291,11 @@ exports.getNewPassword = (req, res, next) => {
         userId: user._id.toString(),
       });
     })
-    .catch((err) => console.log(err));
+    .catch((err) => {
+      const error = new Error(err);
+      error.httpStatusCode = 500;
+      next(error);
+    });
 };
 
 exports.postNewPassword = (req, res, next) => {
@@ -306,5 +324,9 @@ exports.postNewPassword = (req, res, next) => {
     .then((result) => {
       return res.redirect("login");
     })
-    .catch((err) => console.log(err));
+    .catch((err) => {
+      const error = new Error(err);
+      error.httpStatusCode = 500;
+      next(error);
+    });
 };
