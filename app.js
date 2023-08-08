@@ -46,6 +46,12 @@ app.use(csrf());
 app.use(flash());
 
 app.use((req, res, next) => {
+  res.locals.isAuthenticated = req.session.loggedInUser;
+  res.locals.csrfToken = req.csrfToken();
+  next();
+});
+
+app.use((req, res, next) => {
   if (!req.session.loggedInUser) {
     return next();
   }
@@ -58,14 +64,8 @@ app.use((req, res, next) => {
       next();
     })
     .catch((err) => {
-      throw new Error(err);
+      next(new Error(err));
     });
-});
-
-app.use((req, res, next) => {
-  res.locals.isAuthenticated = req.session.loggedInUser;
-  res.locals.csrfToken = req.csrfToken();
-  next();
 });
 
 app.use("/admin", adminRoutes);
