@@ -2,6 +2,7 @@ const mongodb = require("mongodb");
 const Product = require("../models/product");
 const product = require("../models/product");
 const mongoose = require("mongoose");
+const fileHelper = require("../util/file");
 
 const { validationResult } = require("express-validator");
 
@@ -22,7 +23,6 @@ exports.postAddProduct = (req, res, next) => {
   const price = req.body.price;
   const description = req.body.description;
 
-
   if (!image) {
     return res.status(422).render("admin/edit-product", {
       pageTitle: "Add Product",
@@ -37,7 +37,6 @@ exports.postAddProduct = (req, res, next) => {
       errorMessage: "Attached file is  not an image",
       validationErrors: [],
     });
-    
   }
 
   const errors = validationResult(req);
@@ -61,7 +60,6 @@ exports.postAddProduct = (req, res, next) => {
   }
 
   const imageUrl = image.path;
-
 
   const product = new Product({
     title: title,
@@ -147,6 +145,7 @@ exports.postEditProduct = (req, res, next) => {
 
       product.title = updatedTitle;
       if (image) {
+        fileHelper.deleteFile(product.imageUrl);
         product.imageUrl = image.path;
       }
       product.price = updatedPrice;
@@ -182,7 +181,15 @@ exports.getProducts = (req, res, next) => {
 
 exports.postDeleteProduct = (req, res, next) => {
   const prodId = req.body.productId;
-  Product.deleteOne({ _id: prodId, userId: req.user._id })
+
+  Product.findById(prodId)
+    .then((prod) => {
+      if (!prod) {
+        return new Error("Product not found!");
+      }
+      fileHelper.deleteFile(prod.imageUrl);
+      return Product.deleteOne({ _id: prodId, userId: req.user._id });
+    })
     .then(() => {
       console.log("DESTROYED PRODUCT");
       res.redirect("/admin/products");
